@@ -1,7 +1,7 @@
 Doric is a concept for my game development libarary
 It's my attempt to bring together the algorithms and snippets of code to be used as a library
 
-usuage code
+usage code
 
 compile using the following command to run the test program
 
