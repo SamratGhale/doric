@@ -1,0 +1,48 @@
+Concept for library for making 2d games 
+
+Usecase
+
+DoricPlatformType :: enum {
+	GLFW,
+	WIN32, //If we want more optimization in os level
+	X11,
+}
+
+DoricState :: struct {
+	has_imgui : bool,
+
+}
+
+//Alot of parameters
+//Should handle callbacks like viewport and cursor
+
+dr_state : DoricState = {}
+
+dr.Init(&dr_state, width, height, title, attributes, platform_type)
+
+
+while game_running {
+
+	dr.UpdateInput() //also update cursor position and window size
+
+	tex: = dr.DoricTex = dr.InitTex("filepath")
+	update_game(&dr_state) //for inputs and graphics?
+
+	dr.UpdateGraphics(&dr_state)
+}
+
+update_game :: proc {
+	dr.DrawText(string, x, y, size, font) //only 2d
+	dr.DrawTex(DoricTex, )
+}
+
+
+//should set the has_imgui.
+
+DrImguiConfig :: struct {
+	
+}
+dr.InitImgui()  
+
+
+
