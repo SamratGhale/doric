@@ -50,6 +50,8 @@ add_new_chunk :: proc(pos: vec2i){
 }
 
 get_world_chunk :: proc(pos: vec2i)->^Chunk{
+    context.allocator      = state.allocator
+    context.temp_allocator = state.temp_allocator
     hash := 19 * abs(pos.x) + 7 + abs(pos.y)
 
     world := &state.world
@@ -123,6 +125,8 @@ remove_entity_from_world :: proc(old_p: WorldPos, entity_index: EntityIndex){
 change_entity_location :: proc(entity_index:EntityIndex, entity: ^Entity, new_p: WorldPos){
     //Remove old entity from the chunk
     //Add new entity to new chunk
+    context.allocator      = state.allocator
+    context.temp_allocator = state.temp_allocator
 
     if entity_index == 0 do return
 

@@ -1,14 +1,30 @@
 package doric
 
+/*
+
+Completed :
+  Fixed memory leaks (add areans)
+
+TODO: 
+  Font adding 
+  Finalize where the user defines the EntityTypes
+*/
+
 import gl "vendor:OpenGL"
 import "core:thread"
+import "core:mem/virtual"
 import "core:math/linalg"
 import "core:fmt"
-import "core:image/png"
+import "base:runtime"
 import "vendor:glfw"
 
+import im "./odin-imgui"
+import "./odin-imgui/imgui_impl_glfw"
+import "./odin-imgui/imgui_impl_opengl3"
+
 PlatformType :: enum {
-    GLFW, //only support GLFW now 
+    GLFW, //only support GLFW now
+
     //WIN32,
     //X11,
 }
@@ -21,17 +37,18 @@ vec4        :: linalg.Vector4f32
 EntityIndex :: distinct u32
 
 
+
 ButtonState :: struct{
     //stores if the key is up or down
     ended_down      : bool,
 
     //stores if there was change in the key in this frame
-    half_trans_count: i32, 
+    half_trans_count: i32,
 
     /*
 	we can get the pressed and release
 	pressed = half_trans_count is >0 and ended_down = false
-	release = half_trans_count is >0 and ended_down = true 
+	release = half_trans_count is >0 and ended_down = true
     */
 }
 
@@ -49,7 +66,7 @@ Button :: enum {
     BACK,
     ENTER,
     ESCAPE,
-    SPACE,               
+    SPACE,
     DEL,
     F1,
     F2,
@@ -62,7 +79,7 @@ Button :: enum {
 //reprensets one input device, i.e keyboard, gamepad 
 ControllerInput :: struct {
     is_connected, is_analog: b32,
-    stick_x, stick_y : f32, 
+    stick_x, stick_y : f32,
     buttons : [Button]ButtonState,
 }
 GameInput :: struct{
@@ -81,6 +98,7 @@ process_keyboard_input :: proc (button: ^ButtonState, is_down: bool){
     }
 }
 
+
 is_pressed :: proc(button: Button, index: int= 0) -> bool{
     input := &state.input
     using Button
@@ -96,7 +114,7 @@ is_down :: proc(button: Button, index: int= 0) -> bool{
     keyboard_input := &state.input.controllers[index]
 
     key := keyboard_input.buttons[button]
-    return key.ended_down 
+    return key.ended_down
 }
 
 process_inputs :: proc(){
@@ -159,6 +177,12 @@ DoricState :: struct{
 
     pool : thread.Pool,
     //gl_conf : GlConfig;
+
+    //add arenas
+    allocator      : runtime.Allocator,
+    temp_allocator : runtime.Allocator,
+    arena          : virtual.Arena, //static arena
+    temp_arena     : virtual.Arena, //static arena
 }
 
 
@@ -192,10 +216,27 @@ Init :: proc (
 	gl.Viewport(0, 0, x, y);
     }
 
+    //initilize arena
+    total_size : uint = runtime.Gigabyte * 2;
+    err := virtual.arena_init_static(&state.arena,      total_size, total_size);
+    err =  virtual.arena_init_static(&state.temp_arena, total_size, total_size);
+    
+    state.allocator      = virtual.arena_allocator(&state.arena);
+    state.temp_allocator = virtual.arena_allocator(&state.temp_arena);
+
+    context.allocator      = state.allocator
+    context.temp_allocator = state.temp_allocator
+
     if !bool(glfw.Init())
     {
 	return false
     }
+
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 2)
+    glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+    glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1) // i32(true)
+
 
     state.window = glfw.CreateWindow(width, height, title, nil, nil)
     glfw.MakeContextCurrent(state.window)
@@ -204,8 +245,29 @@ Init :: proc (
     glfw.SetWindowSizeCallback(state.window, viewport_callback)
     gl.Viewport(0, 0, width, height)
 
+    //initilize imgui 
+
+    im.CHECKVERSION()
+    im.CreateContext()
+    io := im.GetIO()
+    io.ConfigFlags += {.NavEnableKeyboard, .NavEnableGamepad}
+
+    when im.IMGUI_BRANCH == "docking" {
+	io.ConfigFlags += {.DockingEnable}
+	io.ConfigFlags += {.ViewportsEnable}
+
+	style := im.GetStyle()
+	style.WindowRounding = 0
+	style.Colors[im.Col.WindowBg].w = 1
+    }
+
+
+    im.StyleColorsDark()
+    imgui_impl_glfw.InitForOpenGL(state.window, true)
+    imgui_impl_opengl3.Init("#version 150")
+
     ok : bool
-    state.program_id, ok = gl.load_shaders_file("vert.glsl", "frag.glsl") 
+    state.program_id, ok = gl.load_shaders_file("vert.glsl", "frag.glsl")
     parse_all_asset_start()
     if !ok{
 	fmt.eprintln("Failed to initilize shaders")
@@ -219,8 +281,11 @@ Init :: proc (
 
     parse_all_asset_end()
 
-    state.running = true
 
+	
+
+    state.running = true
+    state.has_imgui = true
     return true
 }
 
@@ -231,11 +296,17 @@ Init :: proc (
     start simulation
 **/
 StartFrame :: proc(){
+    context.allocator      = state.temp_allocator
+    context.temp_allocator = state.temp_allocator
+
     glfw.PollEvents()
     process_inputs()
     gl.ClearColor(0.5,0.5,0.5,1)
     gl.Clear(gl.COLOR_BUFFER_BIT)
 
+    imgui_impl_opengl3.NewFrame()
+    imgui_impl_glfw.NewFrame()
+    im.NewFrame()
 
     center : WorldPos = {chunk={0,0}, offset={0,0}}
     bounds : mat2 = {}
@@ -245,12 +316,28 @@ StartFrame :: proc(){
     end_sim(sim_region)
 
     render_entities(sim_region)
+
+    free(sim_region)
+    free_all(state.temp_allocator)
+    free_all(context.temp_allocator)
 }
 
 //End sim, Render entities,  Swap buffers
 EndFrame :: proc(){
-	glfw.SwapBuffers(state.window)
-	state.running = !glfw.WindowShouldClose(state.window)
+
+    im.Render()
+    imgui_impl_opengl3.RenderDrawData(im.GetDrawData())
+
+    when im.IMGUI_BRANCH == "docking" {
+	backup_current_window := glfw.GetCurrentContext()
+	im.UpdatePlatformWindows()
+	im.RenderPlatformWindowsDefault()
+	glfw.MakeContextCurrent(backup_current_window)
+    }
+
+
+    glfw.SwapBuffers(state.window)
+    state.running = !glfw.WindowShouldClose(state.window)
 }
 
 //Use case example for the doric libaray 

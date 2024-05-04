@@ -49,6 +49,8 @@ add_entity_to_sim :: proc(
     low:       ^Entity,
     entity_rel_pos: vec2,
 ) -> ^SimEntity {
+    context.allocator      = state.allocator
+    context.temp_allocator = state.temp_allocator
 
     //context.allocator = platform.temp_allocator
     assert(low_index != 0)
@@ -75,6 +77,9 @@ add_entity_to_sim :: proc(
 //Adds the entities inside the bounds to the entities array of the sim region
 
 begin_sim :: proc(center : WorldPos, bounds : mat2) -> ^SimRegion{
+    context.allocator      = state.temp_allocator
+    context.temp_allocator = state.temp_allocator
+
     world := &state.world
 
     sim_region := new(SimRegion)
@@ -140,6 +145,8 @@ render_entities :: proc(region: ^SimRegion)
 {
     using gl
 
+    context.allocator      = state.allocator
+    context.temp_allocator = state.temp_allocator
     UseProgram(state.program_id)
     ActiveTexture(TEXTURE0)
 

@@ -228,8 +228,8 @@ opengl_create_texture_from_img :: proc(image : ^TexHandle){
 
 }
 opengl_update_texture_from_img :: proc(image : ^TexHandle){
-	//context.allocator = platform.temp_allocator
-	//context.temp_allocator = platform.temp_allocator
+	context.allocator      = state.temp_allocator
+	context.temp_allocator = state.temp_allocator
 
 	img_bytes := bytes.buffer_to_bytes(&image.img.pixels)
 
