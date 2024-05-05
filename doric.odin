@@ -7,6 +7,12 @@ Completed :
 
 TODO: 
   Mouse control moving around the game
+  Use the entity struct in the library as a base for the Entity the User uses
+
+
+  Player :: struct {
+    dr_entity : using DoricEntity,
+  }
 
   Edit mode and game mode
   Font adding 
@@ -85,6 +91,7 @@ ControllerInput :: struct {
     stick_x, stick_y : f32,
     buttons : [Button]ButtonState,
 }
+
 GameInput :: struct{
     dt_for_frame  : f32,
     mouse_x, mouse_y, mouse_z : f64,
@@ -292,7 +299,7 @@ Init :: proc (
 
     initilize_world()
 
-    add_entity({chunk  = { 0,0}, offset = {0,0}}, .None, "")
+    add_entity({chunk  = { 0,0}, offset = {0,0}}, "")
 
 
     parse_all_asset_end()
@@ -354,26 +361,66 @@ EndFrame :: proc(){
 }
 
 //Use case example for the doric libaray 
+
+//While defining and creating new entities
+// add using base: Entity in the defination 
+// call add_entity() after creating your own entity
+
 TEST_DORIC :: #config(TEST_DORIC, false)
 when TEST_DORIC{
+
+    EntityType :: enum{None, Player, Gravity, Stone, Wall, Gate }
+
+    Player :: struct {
+	using base: ^Entity,
+	direction : u32,
+    }
+
+    add_player :: proc(){
+	entity := add_entity({chunk  = { 0,0}, offset = {0,0}},   "wall_rough")
+	player := new(Player)
+	player.base = entity
+	player.type = .Player
+	player.varient = uintptr(player)
+    }
+
+    add_wall :: proc(){
+	entity := add_entity({chunk  = { 0,0}, offset = {-1,0}},  "wall_rough")
+	entity.type = .Wall
+    }
+
     main :: proc (){
 
 	dr_state : DoricState
 
 	Init(&dr_state, 900, 900, "Hello", .GLFW)
 
-	add_entity({chunk  = { 0,0}, offset = {0,0}},  .Wall, "wall_rough")
-	add_entity({chunk  = { 0,0}, offset = {1,0}},  .Wall, "wall_rough")
-	add_entity({chunk  = { 0,0}, offset = {-1,0}}, .Wall, "wall_rough")
+	//add_entity({chunk  = { 0,0}, offset = {0,0}},   "wall_rough")
+	//add_entity({chunk  = { 0,0}, offset = {1,0}},   "wall_rough")
+	//add_entity({chunk  = { 0,0}, offset = {-1,0}},  "wall_rough")
+	add_player()
+	add_wall()
 
 	for dr_state.running{
+
+	    //Follow the same calling coventions ? 
 	    StartFrame()
+
 	    sim_region := begin_sim(state.world.center, state.world.bounds)
 
 	    for &entity in &sim_region.entities{
-		if is_down(.MOVE_DOWN){
-		    entity.pos.y -= 0.01
-		    //the library should give some prebuilt functions to move player
+		low := state.game.entities[u32(entity.index)]
+
+		#partial switch low.type{
+		case .Player:{
+		    if is_down(.MOVE_DOWN){
+			entity.pos.y -= 0.01
+			//TOOD: the library should give some prebuilt functions to move player
+		    }
+		    if is_down(.MOVE_UP){
+			entity.pos.y += 0.01
+		    }
+		}
 		}
 	    }
 

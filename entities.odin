@@ -14,9 +14,7 @@ package doric
 //TODO: Game designer should be able to define the entity types
 
 
-//Entity base
-//For testing purposes for now
-EntityType :: enum{None, Player, Gravity, Stone, Wall, Gate }
+//The library should make sure that it never uses EntityType inside the library
 Entity :: struct{
     //pos           : vec2,
     wpos          : WorldPos,
@@ -33,10 +31,10 @@ Entity :: struct{
 
 
 
-add_entity :: proc(pos: WorldPos, type: EntityType, asset_id : string) -> ^Entity
+add_entity :: proc(pos: WorldPos, asset_id : string) -> ^Entity
 {
     uninitwpos := WorldPos{chunk={TILE_CHUNK_UNINITILIZED, TILE_CHUNK_UNINITILIZED}}
-    entity : Entity = {type = type, wpos = uninitwpos, scale = {1,1}, asset_id = asset_id, index = EntityIndex(len(state.game.entities))}
+    entity : Entity = {wpos = uninitwpos, scale = {1,1}, asset_id = asset_id, index = EntityIndex(len(state.game.entities))}
 
     //for now just use the same texture for everyone
 

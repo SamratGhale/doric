@@ -100,7 +100,7 @@ begin_sim :: proc(center : WorldPos, bounds : mat2) -> ^SimRegion{
 
 		for item, index in chunk.entities{
 		    entity := state.game.entities[u32(item)]
-		    if(entity.type != .None){
+		    if(entity.index != 0){
 			entity_sim_space  := subtract(entity.wpos, sim_region.center)
 			add_entity_to_sim(sim_region, item, &entity, entity_sim_space)
 		    }
