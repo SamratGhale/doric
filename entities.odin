@@ -33,7 +33,7 @@ Entity :: struct{
 
 
 
-add_entity :: proc(pos: WorldPos, type: EntityType, asset_id : string)
+add_entity :: proc(pos: WorldPos, type: EntityType, asset_id : string) -> ^Entity
 {
     uninitwpos := WorldPos{chunk={TILE_CHUNK_UNINITILIZED, TILE_CHUNK_UNINITILIZED}}
     entity : Entity = {type = type, wpos = uninitwpos, scale = {1,1}, asset_id = asset_id, index = EntityIndex(len(state.game.entities))}
@@ -44,4 +44,5 @@ add_entity :: proc(pos: WorldPos, type: EntityType, asset_id : string)
 
     new_entity := &state.game.entities[len(state.game.entities) -1 ]
     change_entity_location(entity.index, new_entity, pos)
+    return new_entity
 }

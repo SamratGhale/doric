@@ -49,8 +49,6 @@ add_entity_to_sim :: proc(
     low:       ^Entity,
     entity_rel_pos: vec2,
 ) -> ^SimEntity {
-    context.allocator      = state.allocator
-    context.temp_allocator = state.temp_allocator
 
     //context.allocator = platform.temp_allocator
     assert(low_index != 0)
@@ -79,10 +77,11 @@ add_entity_to_sim :: proc(
 begin_sim :: proc(center : WorldPos, bounds : mat2) -> ^SimRegion{
     context.allocator      = state.temp_allocator
     context.temp_allocator = state.temp_allocator
-
     world := &state.world
 
-    sim_region := new(SimRegion)
+    state.sim_region = new(SimRegion)
+    
+    sim_region := state.sim_region
     sim_region.center = center
     sim_region.bounds = bounds
     sim_region.entity_count = 0;
@@ -145,8 +144,6 @@ render_entities :: proc(region: ^SimRegion)
 {
     using gl
 
-    context.allocator      = state.allocator
-    context.temp_allocator = state.temp_allocator
     UseProgram(state.program_id)
     ActiveTexture(TEXTURE0)
 
@@ -154,7 +151,7 @@ render_entities :: proc(region: ^SimRegion)
     Uniform1i(state.uniforms["is_tex"].location, 1)
 
     translation := linalg.matrix4_translate_f32({0,0, 0})
-    scale := linalg.matrix4_scale(vec3{1,1,1})
+    scale := linalg.matrix4_scale(vec3{state.world.scale.z,state.world.scale.z,state.world.scale.z })
     view = translation * scale
     proj = linalg.MATRIX4F32_IDENTITY
 

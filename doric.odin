@@ -6,6 +6,9 @@ Completed :
   Fixed memory leaks (add areans)
 
 TODO: 
+  Mouse control moving around the game
+
+  Edit mode and game mode
   Font adding 
   Finalize where the user defines the EntityTypes
 */
@@ -29,10 +32,10 @@ PlatformType :: enum {
     //X11,
 }
 
-vec2 :: linalg.Vector2f32
-vec3 :: linalg.Vector3f32
-vec3i :: [3]i32
-vec2i :: [2]i32
+vec2        :: linalg.Vector2f32
+vec3        :: linalg.Vector3f32
+vec3i       :: [3]i32
+vec2i       :: [2]i32
 vec4        :: linalg.Vector4f32
 EntityIndex :: distinct u32
 
@@ -175,6 +178,7 @@ DoricState :: struct{
     game  : GameState,
     asset : ^Asset,
 
+    sim_region : ^SimRegion,
     pool : thread.Pool,
     //gl_conf : GlConfig;
 
@@ -216,6 +220,12 @@ Init :: proc (
 	gl.Viewport(0, 0, x, y);
     }
 
+    scroll_callback :: proc "c" (window: glfw.WindowHandle, x, y: f64){
+	//state.pos = {x, y}
+	//gl.Viewport(0, 0, x, y);
+	state.world.scale.z += f32(y) * 0.05
+    }
+
     //initilize arena
     total_size : uint = runtime.Gigabyte * 2;
     err := virtual.arena_init_static(&state.arena,      total_size, total_size);
@@ -233,9 +243,8 @@ Init :: proc (
     }
 
     glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
-    glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 2)
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
     glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-    glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, 1) // i32(true)
 
 
     state.window = glfw.CreateWindow(width, height, title, nil, nil)
@@ -243,6 +252,8 @@ Init :: proc (
     gl.load_up_to(4, 6, glfw.gl_set_proc_address)
     glfw.SwapInterval(1)
     glfw.SetWindowSizeCallback(state.window, viewport_callback)
+
+    glfw.SetScrollCallback(state.window, scroll_callback);
     gl.Viewport(0, 0, width, height)
 
     //initilize imgui 
@@ -273,6 +284,11 @@ Init :: proc (
 	fmt.eprintln("Failed to initilize shaders")
     }
     state.uniforms = gl.get_uniforms_from_program(state.program_id)
+    gl.UseProgram(state.program_id)
+    gl.FrontFace(gl.CW)
+    gl.CullFace(gl.BACK)
+    gl.Enable(gl.DEPTH_TEST)
+    gl.Enable(gl.BLEND)
 
     initilize_world()
 
@@ -281,6 +297,8 @@ Init :: proc (
 
     parse_all_asset_end()
 
+    state.world.bounds[0] = {-1,-1}
+    state.world.bounds[1] = {1,1}
 
 	
 
@@ -302,29 +320,24 @@ StartFrame :: proc(){
     glfw.PollEvents()
     process_inputs()
     gl.ClearColor(0.5,0.5,0.5,1)
-    gl.Clear(gl.COLOR_BUFFER_BIT)
 
+    gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     imgui_impl_opengl3.NewFrame()
     imgui_impl_glfw.NewFrame()
     im.NewFrame()
 
-    center : WorldPos = {chunk={0,0}, offset={0,0}}
-    bounds : mat2 = {}
-    bounds[0] = {-1,-1}
-    bounds[1] = {1,1}
-    sim_region := begin_sim(center, bounds)
-    end_sim(sim_region)
+    render_world_panel()
 
-    render_entities(sim_region)
-
-    free(sim_region)
-    free_all(state.temp_allocator)
-    free_all(context.temp_allocator)
 }
 
 //End sim, Render entities,  Swap buffers
 EndFrame :: proc(){
 
+    render_entities(state.sim_region)
+
+    free(state.sim_region)
+    free_all(state.temp_allocator)
+    free_all(context.temp_allocator)
     im.Render()
     imgui_impl_opengl3.RenderDrawData(im.GetDrawData())
 
@@ -349,10 +362,23 @@ when TEST_DORIC{
 
 	Init(&dr_state, 900, 900, "Hello", .GLFW)
 
-	add_entity({chunk  = { 0,0}, offset = {0,0}}, .Player, "wall_rough")
+	add_entity({chunk  = { 0,0}, offset = {0,0}},  .Wall, "wall_rough")
+	add_entity({chunk  = { 0,0}, offset = {1,0}},  .Wall, "wall_rough")
+	add_entity({chunk  = { 0,0}, offset = {-1,0}}, .Wall, "wall_rough")
+
 	for dr_state.running{
 	    StartFrame()
+	    sim_region := begin_sim(state.world.center, state.world.bounds)
 
+	    for &entity in &sim_region.entities{
+		if is_down(.MOVE_DOWN){
+		    entity.pos.y -= 0.01
+		    //the library should give some prebuilt functions to move player
+		}
+	    }
+
+
+	    end_sim(sim_region)
 	    EndFrame()
 	}
 

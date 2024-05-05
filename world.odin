@@ -1,5 +1,6 @@
 package doric
 
+import im "./odin-imgui"
 import "core:mem/virtual"
 import "base:runtime"
 import "core:math/linalg"
@@ -31,6 +32,10 @@ World :: struct {
     csim : vec2,
     chunk_hash : map[i32][dynamic]Chunk,
     meters_to_pixels: u32,
+
+    center : WorldPos,
+    bounds : mat2,
+    scale  : vec3, //Vec3 because we also want to control how big is our z axis
 }
 
 add_new_chunk :: proc(pos: vec2i){
@@ -176,6 +181,7 @@ initilize_world :: proc()
     world := &state.world
     world.chunk_hash = make_map(map[i32][dynamic]Chunk)
     world.csim = vec2{f32(TILE_COUNT_PER_WIDTH), f32(TILE_COUNT_PER_HEIGHT)}
+    world.scale = {1,1,1}
 
     //All chunks are uninitilize at first
     for key, &chunk in world.chunk_hash
@@ -229,6 +235,36 @@ subtract :: proc(a: WorldPos, b : WorldPos) -> vec2
 
 
 
+
+
+/*
+    This imgui panel should allow for inspectaion and manipulation of the world parameters
+
+    Control where the center of the world is
+    Control world bounds 
+*/
+render_world_panel :: proc(){
+    world := &state.world
+    if im.Begin("World"){
+	im.Text("Hello world")
+	im.SliderInt("chunk_x", &world.center.chunk.x, -20, 20)
+	im.SliderInt("chunk_y", &world.center.chunk.y, -20, 20)
+	im.SliderFloat("offset_x", &world.center.offset.x, -10, 10)
+	im.SliderFloat("offset_y", &world.center.offset.y, -10, 10)
+
+	im.Text("Camera bounds")
+	im.SliderFloat("bound_neg_x", &world.bounds[0,0], -20, 20)
+	im.SliderFloat("bound_pos_x", &world.bounds[0,1], -20, 20)
+	im.SliderFloat("bound_neg_y", &world.bounds[1,0], -20, 20)
+	im.SliderFloat("bound_pos_y", &world.bounds[1,1], -20, 20)
+
+	im.Text("World scale")
+	im.SliderFloat("scale_x", &world.scale.x, -20, 20)
+	im.SliderFloat("scale_y", &world.scale.y, -20, 20)
+	im.SliderFloat("scale_z", &world.scale.z, 0, 1)
+    }
+    im.End()
+}
 
 
 
