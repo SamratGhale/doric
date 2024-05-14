@@ -1,4 +1,4 @@
-#version 330 core
+#version 450 core
 
 in vec3 fragPos;
 in vec2 tex_cord;

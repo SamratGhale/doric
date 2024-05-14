@@ -2,6 +2,8 @@ package doric
 
 import "core:math/linalg"
 import "core:image/png"
+import "base:runtime"
+import "core:fmt"
 import gl "vendor:OpenGL"
 import "core:bytes"
 
@@ -215,6 +217,40 @@ opengl_create_texture :: proc(img :^TexHandle, width, height: i32, gl_ctx: ^GlCo
 	gl.VertexAttribPointer(2, 3, gl.FLOAT, gl.TRUE, 8 * size_of(f32), (5 * size_of(f32)))
 
 }
+
+gl_debug_callback ::   proc "c" (src : u32, type: u32, id: u32, severity: u32, length: i32, msg: cstring, userParam: rawptr){
+    src_str, type_str, severity_str  : cstring = "" , "", ""
+
+    context = runtime.default_context()
+
+    
+    switch (src) {
+    case gl.DEBUG_SOURCE_API:             src_str = "API";             
+    case gl.DEBUG_SOURCE_WINDOW_SYSTEM:   src_str = "WINDOW SYSTEM";   
+    case gl.DEBUG_SOURCE_SHADER_COMPILER: src_str = "SHADER COMPILER"; 
+    case gl.DEBUG_SOURCE_THIRD_PARTY:     src_str = "THIRD PARTY";     
+    case gl.DEBUG_SOURCE_APPLICATION:     src_str = "APPLICATION";     
+    case gl.DEBUG_SOURCE_OTHER:           src_str = "OTHER";           
+    }
+    switch (type) {
+    case gl.DEBUG_TYPE_ERROR:               type_str = "ERROR";               
+    case gl.DEBUG_TYPE_DEPRECATED_BEHAVIOR: type_str = "DEPRECATED_BEHAVIOR"; 
+    case gl.DEBUG_TYPE_UNDEFINED_BEHAVIOR:  type_str = "UNDEFINED_BEHAVIOR";  
+    case gl.DEBUG_TYPE_PORTABILITY:         type_str = "PORTABILITY";         
+    case gl.DEBUG_TYPE_PERFORMANCE:         type_str = "PERFORMANCE";         
+    case gl.DEBUG_TYPE_MARKER:              type_str = "MARKER";              
+    case gl.DEBUG_TYPE_OTHER:               type_str = "OTHER";              
+    }
+    switch (severity) {
+    case gl.DEBUG_SEVERITY_NOTIFICATION: severity_str = "NOTIFICATION"; 
+    case gl.DEBUG_SEVERITY_LOW:          severity_str = "LOW";          
+    case gl.DEBUG_SEVERITY_MEDIUM:       severity_str = "MEDIUM";       
+    case gl.DEBUG_SEVERITY_HIGH:         severity_str = "HIGH";         
+    }
+    
+    fmt.printf("[GL %s %s %s] %u: %s\n", src_str, type_str, severity_str, id, msg);
+}
+
 
 
 opengl_create_texture_from_img :: proc(image : ^TexHandle){

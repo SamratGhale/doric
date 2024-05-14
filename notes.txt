@@ -1,25 +1,7 @@
 Concept for library for making 2d games 
+Later extend it to 3D?
 
 Usecase
-
-DoricPlatformType :: enum {
-	GLFW,
-	WIN32, //If we want more optimization in os level
-	X11,
-}
-
-DoricState :: struct {
-	has_imgui : bool,
-
-}
-
-//Alot of parameters
-//Should handle callbacks like viewport and cursor
-
-dr_state : DoricState = {}
-
-dr.Init(&dr_state, width, height, title, attributes, platform_type)
-
 
 while game_running {
 

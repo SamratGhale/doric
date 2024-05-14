@@ -181,7 +181,7 @@ initilize_world :: proc()
     world := &state.world
     world.chunk_hash = make_map(map[i32][dynamic]Chunk)
     world.csim = vec2{f32(TILE_COUNT_PER_WIDTH), f32(TILE_COUNT_PER_HEIGHT)}
-    world.scale = {1,1,1}
+    world.scale = {1,1,0.2}
 
     //All chunks are uninitilize at first
     for key, &chunk in world.chunk_hash

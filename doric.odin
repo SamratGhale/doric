@@ -9,6 +9,10 @@ TODO:
   Mouse control moving around the game
   Use the entity struct in the library as a base for the Entity the User uses
 
+BUGS:
+  Make sure the bounds are correct
+  Highlight bounds?
+
 
   Player :: struct {
     dr_entity : using DoricEntity,
@@ -249,16 +253,18 @@ Init :: proc (
 	return false
     }
 
-    glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
-    glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 3)
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 4)
+    glfw.WindowHint(glfw.CONTEXT_VERSION_MINOR, 5)
     glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
 
     state.window = glfw.CreateWindow(width, height, title, nil, nil)
     glfw.MakeContextCurrent(state.window)
-    gl.load_up_to(4, 6, glfw.gl_set_proc_address)
+    gl.load_up_to(4, 5, glfw.gl_set_proc_address)
     glfw.SwapInterval(1)
     glfw.SetWindowSizeCallback(state.window, viewport_callback)
+    gl.DebugMessageCallback(gl_debug_callback, nil);
+    gl.DebugMessageControl(gl.DONT_CARE, gl.DONT_CARE, gl.DONT_CARE, 0, nil, gl.TRUE);
 
     glfw.SetScrollCallback(state.window, scroll_callback);
     gl.Viewport(0, 0, width, height)
@@ -428,6 +434,5 @@ when TEST_DORIC{
 	    end_sim(sim_region)
 	    EndFrame()
 	}
-
     }
 }
