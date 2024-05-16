@@ -4,10 +4,11 @@ package doric
 
 Completed :
   Fixed memory leaks (add areans)
+  Use the entity struct in the library as a base for the Entity the User uses
 
 TODO: 
+  Show clicked entity info entity on click
   Mouse control moving around the game
-  Use the entity struct in the library as a base for the Entity the User uses
 
 BUGS:
   Make sure the bounds are correct
@@ -176,7 +177,7 @@ DoricState :: struct{
 
     window     : glfw.WindowHandle,
 
-    cursorPos, size, pos : vec2,
+    cursorPos, size, pos : vec2i,
 
     fullscreen : bool,
 
@@ -198,6 +199,7 @@ DoricState :: struct{
     temp_allocator : runtime.Allocator,
     arena          : virtual.Arena, //static arena
     temp_arena     : virtual.Arena, //static arena
+    picking_context : PickingContext,
 }
 
 
@@ -227,7 +229,7 @@ Init :: proc (
 
     state = user_state
     viewport_callback :: proc "c" (window: glfw.WindowHandle, x, y: i32){
-	//state.pos = {x, y}
+	state.pos = {x, y}
 	gl.Viewport(0, 0, x, y);
     }
 
@@ -268,6 +270,9 @@ Init :: proc (
 
     glfw.SetScrollCallback(state.window, scroll_callback);
     gl.Viewport(0, 0, width, height)
+    state.size.x = width
+    state.size.y = height
+
 
     //initilize imgui 
 
@@ -317,6 +322,12 @@ Init :: proc (
 
     state.running = true
     state.has_imgui = true
+
+    init_picking_texture()
+
+    //Initialize picking texture
+
+
     return true
 }
 
@@ -348,7 +359,6 @@ EndFrame :: proc(){
 
     render_entities(state.sim_region)
 
-    free(state.sim_region)
     free_all(state.temp_allocator)
     free_all(context.temp_allocator)
     im.Render()
@@ -371,6 +381,8 @@ EndFrame :: proc(){
 //While defining and creating new entities
 // add using base: Entity in the defination 
 // call add_entity() after creating your own entity
+
+//Create simple game
 
 TEST_DORIC :: #config(TEST_DORIC, false)
 when TEST_DORIC{
@@ -409,23 +421,27 @@ when TEST_DORIC{
 
 	for dr_state.running{
 
+
 	    //Follow the same calling coventions ? 
 	    StartFrame()
 
 	    sim_region := begin_sim(state.world.center, state.world.bounds)
 
-	    for &entity in &sim_region.entities{
+	    for &entity, i in &sim_region.entities{
+
+		if !(entity.index > 0){
+		    break
+		}
+
 		low := state.game.entities[u32(entity.index)]
 
 		#partial switch low.type{
 		case .Player:{
-		    if is_down(.MOVE_DOWN){
-			entity.pos.y -= 0.01
 			//TOOD: the library should give some prebuilt functions to move player
-		    }
-		    if is_down(.MOVE_UP){
-			entity.pos.y += 0.01
-		    }
+		    if is_down(.MOVE_DOWN)    do entity.pos.y -= 0.01
+		    if is_down(.MOVE_UP)      do entity.pos.y += 0.01
+		    if is_down(.MOVE_LEFT)    do entity.pos.x -= 0.01
+		    if is_down(.MOVE_RIGHT)   do entity.pos.x += 0.01
 		}
 		}
 	    }

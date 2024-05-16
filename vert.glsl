@@ -13,9 +13,9 @@ uniform mat4 view;
 
 void main(){
 
-	gl_Position = proj * view * model * vec4(aPos, 1.0);
+  gl_Position = proj * view * model * vec4(aPos, 1.0);
 
-    fragPos  = vec3(model * vec4(aPos, 1.0));
-	tex_cord = vec2(aTexCoord.x, 1.0 - aTexCoord.y);
-    fragNormal = mat3(transpose(inverse(model))) * aNormal;
+  fragPos  = vec3(model * vec4(aPos, 1.0));
+  tex_cord = vec2(aTexCoord.x, 1.0 - aTexCoord.y);
+  fragNormal = mat3(transpose(inverse(model))) * aNormal;
 }

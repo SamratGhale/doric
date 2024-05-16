@@ -3,6 +3,7 @@ import "core:math/linalg"
 import gl "vendor:OpenGL"
 
 mat3 :: linalg.Matrix3x2f32
+mat4 :: linalg.Matrix4x4f32
 mat2 :: linalg.Matrix2x2f32
 
 /*
@@ -144,16 +145,21 @@ render_entities :: proc(region: ^SimRegion)
 {
     using gl
 
-    UseProgram(state.program_id)
-    ActiveTexture(TEXTURE0)
+    context.allocator      = state.temp_allocator
+    context.temp_allocator = state.temp_allocator
 
     proj, view : linalg.Matrix4f32
-    Uniform1i(state.uniforms["is_tex"].location, 1)
 
     translation := linalg.matrix4_translate_f32({0,0, 0})
     scale := linalg.matrix4_scale(vec3{state.world.scale.z,state.world.scale.z,state.world.scale.z })
     view = translation * scale
     proj = linalg.MATRIX4F32_IDENTITY
+
+    Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT)
+
+    UseProgram(state.program_id)
+    ActiveTexture(TEXTURE0)
+    Uniform1i(state.uniforms["is_tex"].location, 1)
 
     Uniform1i(state.uniforms["light_on"].location, 0)
 
@@ -180,6 +186,54 @@ render_entities :: proc(region: ^SimRegion)
 
 	UniformMatrix4fv(state.uniforms["model"].location, 1, FALSE, &model[0,0])
 	DrawArrays(TRIANGLES, 0, 6)
+    }
+    UseProgram(0)
+    picking_phase(region, proj, view)
+
+}
+
+picking_phase :: proc (region: ^SimRegion, proj, view : mat4 ){
+
+    context.allocator      = state.temp_allocator
+    context.temp_allocator = state.temp_allocator
+    using state.picking_context
+    using gl
+    UseProgram(program_id)
+    BindFramebuffer(DRAW_FRAMEBUFFER, fbo)
+    Clear(COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT)
+    ActiveTexture(TEXTURE0)
+    model : mat4;
+
+    for entity, i in region.entities
+    {
+
+	if i >= int(region.entity_count) do break
+	low := state.game.entities[u32(entity.index)]
+
+	asset := get_asset(low.asset_id)
+	gl_ctx := &asset.textures[0].gl
+
+	BindBuffer(ARRAY_BUFFER, gl_ctx.vbo)
+	BindTexture(TEXTURE_2D, gl_ctx.tex_handle)
+	BindVertexArray(gl_ctx.vao)
+
+	model     := linalg.matrix4_translate(vec3{entity.pos.x, entity.pos.y, 0})
+	new_scale := vec3{low.scale.x, low.scale.y, 1}
+	entity_scale := linalg.matrix4_scale(new_scale)
+	model *= entity_scale
+
+	mvp := proj * view * model
+	UniformMatrix4fv(uniforms["MVP"].location, 1, FALSE, &mvp[0,0])
+	Uniform1ui(uniforms["draw_index"].location,  u32(i) + 1)
+	Uniform1ui(uniforms["obj_index"].location,  u32(entity.index))
+	DrawArrays(TRIANGLES, 0, 6)
+    }
+    BindVertexArray(0)
+    UseProgram(0)
+    BindFramebuffer(DRAW_FRAMEBUFFER, 0)
+
+    if is_pressed(.MOUSE_LEFT){
+	read_picking_pixels()
     }
 }
 

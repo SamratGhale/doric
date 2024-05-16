@@ -15,6 +15,21 @@ package doric
 
 
 //The library should make sure that it never uses EntityType inside the library
+
+
+EntityFlagsEnum :: enum {
+	entity_flag_simming	      ,
+	entity_undo		          ,
+	entity_flag_dead	      ,
+	entity_flag_falling	      ,
+	entity_flag_jumping	      ,
+	entity_flag_on_ground	  ,
+	entity_flag_selected      ,
+	entity_flag_vflipped           ,
+	entity_anim_stretch_side  , //if true then width else height
+}
+EntityFlags :: bit_set[EntityFlagsEnum]
+
 Entity :: struct{
     //pos           : vec2,
     wpos          : WorldPos,
@@ -27,6 +42,7 @@ Entity :: struct{
     dp            : vec2,
     index         : EntityIndex,
     asset_id      : string,
+    flags         : EntityFlags,
 }
 
 
@@ -44,3 +60,24 @@ add_entity :: proc(pos: WorldPos, asset_id : string) -> ^Entity
     change_entity_location(entity.index, new_entity, pos)
     return new_entity
 }
+
+//Use framebuffer (picking from sattal_gl)
+//We can also approxmitely calculate the entity from screen position as we don't have look_at matrix
+//But picking framebuffer is the best method because it can handle non square and rectangle entity
+get_entity_id_from_screen_pos :: proc(){
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
